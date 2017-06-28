@@ -145,7 +145,7 @@ Hey, it works!  You can sort of see how the code maps to the original SPIFF spec
 If you've got any sort of [spidey sense](https://www.youtube.com/watch?v=5Kek3GqbsTk), you'll already be itching to refactor that duplicated lump of code that reads a string from the buffer.  `ByteBuffer` already has methods to read primitive datatypes - `getLong()`, `getInt()` etc. - but doesn't have any methods for reading `String`s, and by now you're possibly yelling "[Extension functions](https://kotlinlang.org/docs/reference/extensions.html)" at the screen.  Let's do it. 
 
 {% highlight kotlin %}
-fun ByteBuffer.readString(length: Int): String {
+fun ByteBuffer.getString(length: Int): String {
     val array = ByteArray(length)
     this.get(array)
     return String(array).trim { char -> char.isWhitespace() or (char == 0x00.toChar()) }
@@ -156,13 +156,13 @@ And we can implement it in the main function
 
 {% highlight kotlin %}
     ...
-    val tag = buffer.readString(3)
+    val tag = buffer.getString(3)
     if(tag != "TAG") exitProcess(1)
 
-    val title = buffer.readString(30)
-    val artist = buffer.readString(30)
-    val album = buffer.readString(30)
-    val year = buffer.readString(4)
+    val title = buffer.getString(30)
+    val artist = buffer.getString(30)
+    val album = buffer.getString(30)
+    val year = buffer.getString(4)
     ...
 {% endhighlight %}
 
@@ -218,13 +218,13 @@ Because the `ByteBuffer` is now `this` in the code block, and `this` is implicit
 binaryFile("ShakingThrough.mp3") {
     position(limit() - 128)
 
-    val tag = readString(3)
+    val tag = getString(3)
     if(tag != "TAG") exitProcess(1)
 
-    val title = readString(30)
-    val artist = readString(30)
-    val album = readString(30)
-    val year = readString(4)
+    val title = getString(30)
+    val artist = getString(30)
+    val album = getString(30)
+    val year = getString(4)
 
     mark()
     position(position() + 28)
@@ -235,7 +235,7 @@ binaryFile("ShakingThrough.mp3") {
 }
 {% endhighlight %}
 
-Okay, now we're really starting to get somewhere! What next?  Well, that `get()` is a bit obscure now. It gets a single byte from the buffer. In the original SPIFF DSL, it's a `byte` instruction. Methods that read from the buffer should represent the datatype you're fetching, so `get()` becomes `byte()`, `readString()` becomes just `string()` etc.  We can just define these as extensions on `ByteBuffer`. We'll also add a `skip()` instruction to replace that unwieldy statement that moves 28 bytes ahead. 
+Okay, now we're really starting to get somewhere! What next?  Well, that `get()` is a bit obscure now. It gets a single byte from the buffer. In the original SPIFF DSL, it's a `byte` instruction. Methods that read from the buffer should represent the datatype you're fetching, so `get()` becomes `byte()`, `getString()` becomes just `string()` etc.  We can just define these as extensions on `ByteBuffer`. We'll also add a `skip()` instruction to replace that unwieldy statement that moves 28 bytes ahead. 
 
 {% highlight kotlin %}
 fun ByteBuffer.string(length: Int): String {
