@@ -8,9 +8,9 @@ ICYMI, in [part 1](https://revbingo.github.io/kotlin/2017/06/25/kotlin-refactori
 
 The DSL that we have is perfectly workable, and any other day I might recommend to leave it there, but what fun would that be?  After all, our aim at the outset was to see how close we could get to the original SPIFF DSL, which previously required many hours of sweating over [JavaCC configuration](https://github.com/revbingo/SPIFF/blob/master/src/main/java/com/revbingo/spiff/parser/gen/spiff.jjt). Plus, we might learn something along the way. 
 
-For a start, the fields in the specification are named by the variables into which they are read, not really as part of the DSL. Again, maybe that's not a bad thing, but we do these things because we can, not because we should. In the SPIFF DSL, the name of the field follows the datatype.
+For a start, the fields in the specification are identified by the names of the variables into which they are read, not really as part of the DSL. Again, maybe that's not a bad thing, but we do these things because we can, not because we should. In the SPIFF DSL, the name of the field follows the datatype. To achieve this, we'll use some operator overloading. Kotlin's operator overloading is relatively sane - you can't make up your own operators á la Scala - but as you'll see you can still do some pretty wacky things with it if you really want to.  And I really want to, for fun at least. We'll do something I've seen refererred to as "operator punning" - using an operator because it *looks* good, not because it makes logical sense. A common example of this is using the division operator `/` as a way to compose filesystem paths. 
 
-To achieve this, we'll use some operator overloading. Kotlin's operator overloading is relatively sane - you can't make up your own operators á la Scala - but as you'll see you can still do some pretty wacky things with it. My operator of choice today will be the `..` operator, which translates to `rangeTo`. In this case, we'll want it to be applied to an arbitrary type (it might be a `String`, or an `Int`, or a `Float`), and the second argument will be a string specifying the name of the field.  Also don't forget that we're refactoring here, so we're looking to make the smallest change we can that moves things forward without breaking it. So the `rangeTo` will need to return the value of the left operand, so that for now we can continue to assign it to a variable. 
+My operator of choice today will be the `..` operator, which translates to `rangeTo`. In this case, we'll want it to be applied to an arbitrary type (it might be a `String`, or an `Int`, or a `Float`), and the second argument will be a string specifying the name of the field.  Also don't forget that we're refactoring here, so we're looking to make the smallest change we can that moves things forward without breaking it. So the `rangeTo` will need to return the value of the left operand, so that for now we can continue to assign it to a variable. 
 
 {% highlight kotlin %}
 class BinaryFile(fileName: String) {
@@ -22,9 +22,9 @@ class BinaryFile(fileName: String) {
 }
 {% endhighlight %}
 
-To define an overloaded operator, we need to know the name of the method that it translates to.  We also need to mark the function with the `operator` keyword.  Finally, like normal extension functions, we can make them apply to any type simply by putting the type in the function signature.  In this case, we want it to apply to `Any` type.  However, note that we're defining it within the `BinaryFile` class. This means that this extension function is only in scope for methods within that class (i.e. in our DSL).  If you try it outside of the DSL block, it won't work. 
+To define an overloaded operator, we need to know the name of the method that it translates to.  We also need to mark the function with the `operator` keyword.  Finally, like normal extension functions, we can make them apply to a particular type simply by putting the type in the function signature.  In this case, we want it to apply to `Any` type.  However, note that we're defining it within the `BinaryFile` class. This means that this extension function is only in scope for methods within that class (i.e. in our DSL).  If you try to use it outside of the DSL block, it won't work, so user's of our code won't get any nasty suprises.
 
-At this point, we just return `this`, we'll change that in a minute. But you can now start using this extension to annotate the DSL.
+At this point, we just return `this`, we'll change that in a minute. But you can now start using the `..` operator to annotate the DSL.
 
 {% highlight kotlin %}
 binaryFile("ShakingThrough.mp3") {
@@ -42,9 +42,9 @@ binaryFile("ShakingThrough.mp3") {
     }
 {% endhighlight %}
 
-By the way, if you wanted to use a named method, instead of an operator, you could achieve the same thing using an [infix function](https://kotlinlang.org/docs/reference/functions.html#infix-notation). The main reason I didn't do that here was because all the neat little words that make sense - `is`, `as`, `to` - are all already used in Kotlin.
+By the way, if you wanted to use a named method, instead of an operator, you could achieve the same thing using an [infix function](https://kotlinlang.org/docs/reference/functions.html#infix-notation). The main reason I didn't do that here was because all the neat little words that make sense - `is`, `as`, `to` - are all already used in Kotlin. Then again, if you *really* wanted to, even that's possible, by using of ``backticks`` around the method name. But that would just be silly.
 
-Now we can look to remove that duplication, where we have both a variable name and the name "annotation" on the other side. But the variables are useful because we need to do some computation later - for example, checking the value of `zeroByte`.  What we need is a way to obtain the value of a field given it's name. Let's store values in a map. Like the original SPIFF, there's nothing clever with scope - the last value read for a given name is the only one you can retrieve.
+Now we can look to remove that duplication, where we have both a variable name and the name "annotation" on the other side. But the variables are useful because we need to do some computation later - for example, checking the value of `zeroByte`.  What we need is a way to obtain the value of a field given its name. Let's store values in a map. Like the original SPIFF, there's nothing clever with scope or arrays - the last value read for a given name is the only one you can retrieve.
 
 {% highlight kotlin %}
 class BinaryFile(fileName: String) {
@@ -60,7 +60,7 @@ class BinaryFile(fileName: String) {
 }
 {% endhighlight %}
 
-Quite simply, when the rangeTo operator is invoked, we store the operand on the left (`this`) in the map with the key being the operand on the right (`name`). Now we just need a way to retrieve that value. One way you could do it would be with a simple method, maybe `getValue("name")`, but that's a little unwieldy, and no fun at all.  Luckily, some of the operators that can be overloaded are *unary*, that is, they only have one operand, so it's quite handy for doing stuff like this:
+Quite simply, when the `rangeTo` operator is invoked, we store the operand on the left (`this`) in the map with the key being the operand on the right (`name`). Now we just need a way to retrieve that value. One way you could do it would be with a simple method, maybe `getValue("name")`, but that's a little unwieldy, and no fun at all.  Luckily, some of the operators that can be overloaded are *unary*, that is, they only have one operand, so it's quite handy for doing stuff like this:
 
 {% highlight kotlin %}
 class BinaryFile(fileName: String) {
@@ -72,7 +72,7 @@ class BinaryFile(fileName: String) {
 }
 {% endhighlight %}
 
-This time, we apply the operator to a `String`, which will be the name that we want to retrieve from the map, and it returns an `Any?`, which is nullable because we might not find that name in the map.  Now, we can use e.g. +"title" to get the value of the `title` field. 
+This time, we apply the operator to a `String`, which will be the name that we want to retrieve from the map, and it returns an `Any?`, which is nullable because we might not find that name in the map.  Now, we can use e.g. `+"title"` to get the value of the `title` field, and remove the assignment to a `val`.
 
 {% highlight kotlin %}
 fun main(args: Array<String>) {
@@ -120,7 +120,7 @@ fun main(args: Array<String>) {
 }
 {% endhighlight %}
 
-Oh boy, now we're really getting close! There's just one more thing we need to implement to be able to almost exactly recreate the original SPIFF DSL, and that's the ability to retrieve the position at which a variable was read. This will allow us to recreate the `.jump &comment` in the original. This is actually a little tricky, as when the buffer is read (and therefore you can know it's starting position) you don't know the name, and once you know the name, the buffer position has moved on. We'll solve this by storing the buffer position in a variable `lastPos`, either after a value has been read (and therefore will be the position of the next piece of data), or when we jump/skip/peek to move the buffer position.  It's not particularly pretty (and it assumes that you always assign a name when you read data from the buffer), but it'll do for our purposes here:
+Oh boy, now we're really getting close! There's just one more thing we need to implement to be able to almost exactly recreate the original SPIFF DSL, and that's the ability to retrieve the position at which a variable was read. This will allow us to recreate the `.jump &comment` in the original. This is actually a little tricky, as when the buffer is read (and therefore you can know its starting position) you don't know the name, and once you know the name, the buffer position has moved on. We'll solve this by storing the buffer position in a variable `lastPos`, either after a value has been read (and therefore will be the position of the next piece of data), or when we jump/skip/peek to move the buffer position.  It's not particularly pretty and it's full of potential bugs (what happens if you don't assign a name to a field?), but it'll do for our purposes here:
 
 {% highlight kotlin %}
 class BinaryFile(fileName: String) {
@@ -163,7 +163,7 @@ class BinaryFile(fileName: String) {
 }
 {% endhighlight %}
 
-And we can now add another unary operator to get the *position* of a variable instead of its value.  Unfortunately, there's no unary operator using an ampersand like the original, so I think we'll use `!`, which is a `not`
+And we can now add another unary operator to get the *position* of a variable instead of its value.  Unfortunately, there's no unary operator using an ampersand like the original, so I think we'll use `!`, which is a `not`:
 
 {% highlight kotlin %}
 class BinaryFile(fileName: String) {
@@ -309,3 +309,5 @@ class BinaryFile(fileName: String) {
     }
 }
 {% endhighlight %}
+
+Next time, with a following wind, we'll continue to follow a path that shouldn't really be followed, and use this code to explore generics, function references and delegates.
