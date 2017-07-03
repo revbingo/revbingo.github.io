@@ -42,7 +42,7 @@ binaryFile("ShakingThrough.mp3") {
     }
 {% endhighlight %}
 
-By the way, if you wanted to use a named method, instead of an operator, you could achieve the same thing using an [infix function](https://kotlinlang.org/docs/reference/functions.html#infix-notation). The main reason I didn't do that here was because all the neat little words that make sense - `is`, `as`, `to` - are all already used in Kotlin. Then again, if you *really* wanted to, even that's possible, by using of backticks around the method name. But that would just be silly.
+By the way, if you wanted to use a named method, instead of an operator, you could achieve the same thing using an [infix function](https://kotlinlang.org/docs/reference/functions.html#infix-notation). The main reason I didn't do that here was because all the neat little words that make sense - `is`, `as`, `to` - are all already used in Kotlin. Then again, if you *really* wanted to, even that's possible, by using backticks around the method name. But that would just be silly.
 
 Now we can look to remove that duplication, where we have both a variable name and the name "annotation" on the other side. But the variables are useful because we need to do some computation later - for example, checking the value of `zeroByte`.  What we need is a way to obtain the value of a field given its name. Let's store values in a map. Like the original SPIFF, there's nothing clever with scope or arrays - the last value read for a given name is the only one you can retrieve.
 
