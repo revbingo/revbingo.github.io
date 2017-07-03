@@ -406,4 +406,4 @@ binaryFile("ShakingThrough.mp3") {
 
 Hopefully you'll agree that it's not a million miles away from the original SPIFF version. Bear in mind that we haven't done any "DSL magic" here. Simply using common features of the language, namely extension functions and passing functions with receivers, we have achieved code that is concise and readable, which is really all a DSL is.
 
-Next time, we'll edge things a little bit closer to the SPIFF version, using some [operator overloading](https://kotlinlang.org/docs/reference/operator-overloading.html). 
+In [part II]({% post_url 2017-06-30-kotlin-refactoring-dsl-2 %}), we'll edge things a little bit closer to the SPIFF version, using some [operator overloading](https://kotlinlang.org/docs/reference/operator-overloading.html). 
