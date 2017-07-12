@@ -67,7 +67,7 @@ class MP3File(fileName: String): BinaryFile(fileName) {
 }
 {% endhighlight %} 
 
-At this point, you've probably got a big red blob showing a compilation error on `MP3File::asId3`. This is, of course, because the `binaryFile` method expects in which a `BinaryFile` is the receiver, not an `MP3File`. That's fairly simple to fix though, we just need to specify that it can be some other type, as long as that type is a subtype of `BinaryFile`. 
+At this point, you've probably got a big red blob showing a compilation error on `MP3File::asId3`. This is because the `binaryFile` method expects to be passed a reference to a method in which a `BinaryFile` is the receiver, not an `MP3File`. That's fairly simple to fix though, we just need to specify that it can be some other type, as long as that type is a subtype of `BinaryFile`. 
 
 {% highlight kotlin %}
 fun <T: BinaryFile> binaryFile(fileName: String, callback: T.() -> Unit) {
@@ -77,7 +77,7 @@ fun <T: BinaryFile> binaryFile(fileName: String, callback: T.() -> Unit) {
 }
 {% endhighlight %}
 
-We've added a generic type to the method - `<T: BinaryFile>` tells the compiler that we'll use a type `T` somewhere in the method, and the compiler should expect it to be a BinaryFile or a subtype of it. And indeed we do use it, we say that the callback method will be on type `T`. So now it happily accepts that `MP3File::asId3` is a valid argument to the `binaryFile` method.  Only now the invocation of the `callback` method doesn't compile, because we're calling it on a concrete `BinaryFile`, not an object of type `T` (which might be a subtype).  Instead of creating an instance of the `BinaryFile` supertype, we need to create an instance of `T`.  Reflection to the rescue. 
+We've added a generic type to the method - `<T: BinaryFile>` tells the compiler that we'll use a type `T` somewhere in the method, and the compiler should expect it to be a BinaryFile or a subtype of it. And indeed we do use it, we say that the callback method will have a receiver of type `T`. So now it happily accepts that `MP3File::asId3` is a valid argument to the `binaryFile` method.  Only now the invocation of the `callback` method doesn't compile, because we're calling it on a concrete `BinaryFile`, not an object of type `T` (which might be a subtype).  Instead of creating an instance of the `BinaryFile` supertype, we need to create an instance of `T`.  Reflection to the rescue. 
 
 {% highlight kotlin %}
 fun <T: BinaryFile> binaryFile(fileName: String, callback: T.() -> Unit) {
@@ -129,7 +129,7 @@ abstract class BinaryFile(fileName: String) {
 
 These changes mean that we can easily supply a "library" of file types for end users to use, all based on the DSL.  
 
-That also means we can start providing some specialisms, depending on the file type. At the moment our DSL is a generic language for parsing different data types from a file. Whilst we're dealing with fairly simple data, that's fine, but sometimes we might encounter some rather more complex data types that are particular to the type of file we're reading. For example, in a zip file, the lastModifiedDate is stored in [MS-DOS date format](http://www.vsft.com/hal/dostime.htm), which allows us to store a date in just 2 bytes. Efficient, but really not very easy to parse using the tools we have in our DSL so far. We'll end up just cluttering our specification again with all sorts of parsing logic. 
+That also means we can start providing some specialisms, depending on the file type. At the moment our DSL is a generic language for parsing different data types from a file. Whilst we're dealing with fairly simple data, that's fine, but sometimes we might encounter some rather more complex data types that are particular to the type of file we're reading. For example, in a zip file, the `lastModifiedDate` is stored in [MS-DOS date format](http://www.vsft.com/hal/dostime.htm), which allows us to store a date in just 2 bytes. Efficient, but really not very easy to parse using the tools we have in our DSL so far. We'll end up just cluttering our specification again with all sorts of parsing logic. 
 
 But we can now extend our DSL with the ability to parse such dates, and we can keep the scope of that to our `ZipFile` parser. First, let's implement the class and parse the first few fields.  Find a zip file of your choice to test on.
 
@@ -150,9 +150,9 @@ class ZipFile(fileName: String): BinaryFile(fileName) {
 }
 {% endhighlight %}
 
-Implementations of the `setorder`, `int` and `short` instructions were exercises for the reader in the part 2. Of course you did them. If you didn't, have a go now, I'll wait...
+Implementations of the `setorder`, `int` and `short` instructions were exercises for the reader in [part 2]({% post_url 2017-06-25-kotlin-refactoring-dsl %}). Of course you did them. If you didn't, have a go now, I'll wait...
 
-Now we have that thorny date time in MsDos format. In this format, we'll read 2 bytes for the time. Bits 0-4 are the seconds, halved. Bits 5-10 are the minute, and the rest of the bits are the hour. In order to parse these, we'll take those two bytes, apply a bit mask, and then shift the bits to get the final number. We do likewise for the date, in which bits 0-4 are the day, 5-8 are the month, and 9-15 are the number of years since 1980. We introduce a method in the ZipFile class to read such dates, and turn them into a `LocalDateTime`.
+Now we have that thorny date time in MSDOS format. In this format, we'll read 2 bytes for the time. Bits 0-4 are the seconds, halved. Bits 5-10 are the minute, and the rest of the bits are the hour. In order to parse these, we'll take those two bytes, apply a bit mask, and then shift the bits to get the final number. We do likewise for the date, in which bits 0-4 are the day, 5-8 are the month, and 9-15 are the number of years since 1980. We introduce a method in the ZipFile class to read such dates, and turn them into a `LocalDateTime`.
 
 {% highlight kotlin %}
 class ZipFile(fileName: String): BinaryFile(fileName) {
@@ -210,7 +210,7 @@ inline fun <reified T: BinaryFile> binaryFile(fileName: String): T {
 }
 {% endhighlight %}
 
-Secondly, we want the ZipFile class to have fields that represent the attributes we've read from the file.  The naive way to do this would be to have methods that make a call into the map - for example `fun lastModified() = valueMap.get("lastModified")`. Thankfully, Kotlin has a terser way of doing this, using [delegated properties](https://kotlinlang.org/docs/reference/delegated-properties.html). The `Map` class implements the `Delegate` interface, meaning that we can just use the `by` keyword to say that the property should be looked up in the valueMap, using the variable name as the key.
+Secondly, we want the ZipFile class to have fields that represent the attributes we've read from the file.  The naive way to do this would be to have methods that make a call into the map - for example `fun lastModified() = valueMap.get("lastModified")`. Thankfully, Kotlin has a terser way of doing this, using [delegated properties](https://kotlinlang.org/docs/reference/delegated-properties.html). The `Map` class implements the `Delegate` interface - classes implementing this interface implement `getValue` and `setValue` methods, that get passed the name of the property being delegated, so in the case of a map it can look up a value in the map using the property name as the key. We indicate delegated properties using the `by` keyword. 
 
 {% highlight kotlin %}
 class ZipFile(fileName: String): BinaryFile(fileName) {
@@ -225,4 +225,6 @@ fun main(args: Array<String>) {
 }
 {% endhighlight %}
 
-That (probably) concludes this whistlestop tour of refactoring to a Kotlin DSL.  I hope you've enjoyed it and can find a way to shoehorn some of these techniques into your own projects.
+Run that code, and you should see that it all works splendidly.  Also note that you have a certain amount of type safety back - if you change the type of `lastModified`, it will blow up at runtime. 
+
+That (probably) concludes this whistlestop tour of refactoring to a Kotlin DSL.  I hope you've enjoyed it and can find a way to shoehorn some of these techniques into your own projects, but use them wisely!  Some of these things are definitely clever, even fun, but nothing beats code that is simple and concise. 
