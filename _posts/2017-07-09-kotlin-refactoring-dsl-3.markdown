@@ -5,6 +5,8 @@ date:   2017-07-09 07:00:00 +0100
 categories: kotlin
 ---
 
+_If you missed them, you probably want to read [part 1]({% post_url 2017-06-25-kotlin-refactoring-dsl %}) and [part 2]({% post_url 2017-06-30-kotlin-refactoring-dsl-2 %}) first_
+
 Welcome back to this rollercoaster ride of things that we probably shouldn't do with Kotlin, but we will, because we can! Plus, we might learn something along the way. Last time out, we got to a point where we'd pretty much taken the DSL part of the project as far as we reasonably can, at least in the scope of the MP3 example. 
 
 But there's a couple of other things that we can explore.  Firstly, our `binaryFile` method expects a code block to be passed to it, so our specification is always going to be inline in whatever code is parsing the file. Wouldn't it be nice to make these things reusable? What if we could provide a library of different file specifications?  Remember way back in [part 1]({% post_url 2017-06-25-kotlin-refactoring-dsl %}), I mentioned that instead of passing the code block, we could pass a function reference. Let's try that. We move the code block into its own method.  Remember that we still have to agree with the type signature, so we have to declare it as an extension function on the `BinaryFile` class
